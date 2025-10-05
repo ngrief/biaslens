@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BiasLens - Media Article Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: #f3f6f8;
+            color: #000000de;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 60px 20px 40px;
+        }
+
+        .header h1 {
+            font-size: 2.6em;
+            font-weight: 600;
+            color: #0a66c2;
+            margin-bottom: 12px;
+            letter-spacing: -0.3px;
+        }
+
+        .header .tagline {
+            color: #666666;
+            font-size: 1.05em;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+
+        .header .description {
+            color: #666666;
+            font-size: 0.9em;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .main-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 35px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.1em;
+            color: #34495e;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .examples {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .example-btn {
+            padding: 8px 16px;
+            background: #ffffff;
+            border: 1px solid #0a66c2;
+            border-radius: 16px;
+            color: #0a66c2;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .example-btn:hover {
+            background: #0a66c2;
+            color: white;
+        }
+
+        .input-area {
+            width: 100%;
+            min-height: 250px;
+            background: #fafbfc;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 1em;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            resize: vertical;
+            transition: all 0.2s ease;
+            line-height: 1.8;
+        }
+
+        .input-area:focus {
+            outline: none;
+            border-color: #3498db;
+            background: white;
+        }
+
+        .analyze-btn {
+            width: 100%;
+            padding: 14px;
+            background: #0a66c2;
+            border: none;
+            border-radius: 24px;
+            color: white;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .analyze-btn:hover {
+            background: #004182;
+            box-shadow: 0 0 0 1px #0a66c2, inset 0 0 0 1px rgba(255,255,255,0.2);
+        }
+
+        .analyze-btn:active {
+            background: #004182;
+        }
+
+        .sentiment-preview {
+            margin-top: 30px;
+            padding: 25px;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            display: none;
+        }
+
+        .sentiment-preview.show {
+            display: block;
+        }
+
+        .sentiment-preview-title {
+            font-size: 0.95em;
+            color: #666666;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .metric-header {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .metric-value {
+            font-size: 2.2em;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #95a5a6;
+        }
+
+        .sentiment-bar {
+            display: flex;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .sentiment-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+
+        .sentiment-section .label {
+            font-size: 0.75em;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        .positive { background: #057642; }
+        .neutral { background: #5e6c84; }
+        .negative { background: #c9372c; }
+
+        .highlighted-text {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            margin-top: 20px;
+            line-height: 2;
+        }
+
+        .loaded-positive {
+            background: linear-gradient(120deg, #d4edda 0%, #c3e6cb 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border-bottom: 2px solid #28a745;
+        }
+
+        .loaded-negative {
+            background: linear-gradient(120deg, #f8d7da 0%, #f5c6cb 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border-bottom: 2px solid #dc3545;
+        }
+
+        .emotional-strong {
+            background: linear-gradient(120deg, #fff3cd 0%, #ffeaa7 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border-bottom: 2px solid #ffc107;
+        }
+
+        .processing {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            display: none;
+        }
+
+        .processing.active {
+            display: block;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+            color: #7f8c8d;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .insight-box {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 15px 20px;
+            margin-top: 20px;
+            border-radius: 6px;
+        }
+
+        .insight-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .insight-text {
+            color: #5a6c7d;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #95a5a6;
+            font-size: 0.85em;
+            border-top: 1px solid #ecf0f1;
+            margin-top: 50px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .main-panel {
+                padding: 25px;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>BiasLens</h1>
+            <div class="tagline">Analyze media articles for bias, emotion, and loaded language</div>
+            <div class="description">
+                Understand how articles are framed, not what's "true" or "false"
+            </div>
+        </div>
+
+        <div class="main-panel">
+            <div class="section-title">Paste an Article or News Text</div>
+
+            <div class="examples">
+                <button class="example-btn" onclick="loadExample(1)">Tech Industry</button>
+                <button class="example-btn" onclick="loadExample(2)">Political News</button>
+                <button class="example-btn" onclick="loadExample(3)">Healthcare</button>
+                <button class="example-btn" onclick="loadExample(4)">Opinion Editorial</button>
+                <button class="example-btn" onclick="loadExample(5)">Business News</button>
+                <button class="example-btn" onclick="loadExample(6)">Climate Report</button>
+                <button class="example-btn" onclick="loadExample(7)">Sports Coverage</button>
+                <button class="example-btn" onclick="loadExample(8)">Education Policy</button>
+            </div>
+
+            <textarea class="input-area" id="articleText" placeholder="Paste your article text here. BiasLens will analyze the language, emotional content, loaded words, and framing techniques..."></textarea>
+
+            <button class="analyze-btn" onclick="analyzeArticle()">Analyze Article</button>
+
+            <div class="processing" id="processing">
+                Analyzing language patterns and bias indicators...
+            </div>
+
+            <div class="sentiment-preview" id="sentimentPreview">
+                <div class="sentiment-preview-title">Article Sentiment Overview</div>
+                <div class="sentiment-bar">
+                    <div class="sentiment-section negative" id="negBarPreview" style="width: 33.3%">
+                        <span>Negative</span>
+                        <span class="label" id="negPercent">33%</span>
+                    </div>
+                    <div class="sentiment-section neutral" id="neuBarPreview" style="width: 33.3%">
+                        <span>Neutral</span>
+                        <span class="label" id="neuPercent">33%</span>
+                    </div>
+                    <div class="sentiment-section positive" id="posBarPreview" style="width: 33.3%">
+                        <span>Positive</span>
+                        <span class="label" id="posPercent">33%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="results">
+            <div class="results-grid">
+                <div class="metric-card">
+                    <div class="metric-header">Overall Sentiment</div>
+                    <div class="metric-value" id="sentimentScore">0.0</div>
+                    <div class="metric-label" id="sentimentLabel">Neutral</div>
+                    <div class="sentiment-bar">
+                        <div class="sentiment-section negative" id="negBar" style="width: 33.3%">Negative</div>
+                        <div class="sentiment-section neutral" id="neuBar" style="width: 33.3%">Neutral</div>
+                        <div class="sentiment-section positive" id="posBar" style="width: 33.3%">Positive</div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">Emotional Intensity</div>
+                    <div class="metric-value" id="emotionScore">0%</div>
+                    <div class="metric-label">Emotional words detected</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">Fact vs Opinion</div>
+                    <div class="metric-value" id="factRatio">50%</div>
+                    <div class="metric-label">Factual statements</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">Loaded Language</div>
+                    <div class="metric-value" id="loadedCount">0</div>
+                    <div class="metric-label">Biased words found</div>
+                </div>
+            </div>
+
+            <div class="main-panel" style="margin-top: 30px;">
+                <div class="section-title">Highlighted Analysis</div>
+
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color loaded-positive"></div>
+                        <span>Positive Framing</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color loaded-negative"></div>
+                        <span>Negative Framing</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color emotional-strong"></div>
+                        <span>Emotional Language</span>
+                    </div>
+                </div>
+
+                <div class="highlighted-text" id="highlightedText">
+                    Your analyzed text will appear here with highlighting...
+                </div>
+            </div>
+
+            <div class="main-panel" style="margin-top: 30px;">
+                <div class="section-title">Key Insights</div>
+                <div id="insightsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        BiasLens • Analyzes language patterns, not truth claims • Built with client-side NLP
+    </footer>
+
+    <script src="https://unpkg.com/compromise@14.9.0/builds/compromise.min.js"></script>
+    <script>
+        // Check if NLP loaded
+        window.addEventListener('load', function() {
+            if (typeof nlp === 'undefined') {
+                console.warn('NLP library not loaded - using fallback mode');
+            } else {
+                console.log('BiasLens ready - NLP library loaded successfully');
+            }
+        });
+    </script>
+    <script>
+        // Example articles for testing
+        const examples = {
+            1: `Tech giant Apple unveiled its revolutionary new iPhone yesterday, marking another triumph in the company's storied history. The sleek device boasts incredible features that will transform how we communicate. Critics claim the price is too high, but loyal fans are already lining up to get their hands on this game-changing innovation. Industry experts predict this will cement Apple's dominance in the smartphone market.`,
+
+            2: `The controversial policy sparked outrage among citizens who feel betrayed by their elected officials. Opposition leaders slammed the decision as reckless and dangerous, warning of devastating consequences. Supporters, however, praised the bold move as necessary reform. Protesters flooded the streets demanding change, while government officials defended their actions as responsible governance.`,
+
+            3: `New research suggests a promising breakthrough in cancer treatment. Scientists discovered potential benefits in a novel therapeutic approach, though experts caution that more studies are needed. The preliminary findings offer hope to patients, but medical professionals emphasize the importance of consulting qualified healthcare providers. Some critics argue the study's limitations were not adequately addressed.`,
+
+            4: `It's abundantly clear that this issue demands immediate action. Anyone with common sense can see the obvious solution. The establishment elites continue to ignore the will of the people, pushing their failed agenda despite overwhelming evidence of its catastrophic failures. We must fight back against this dangerous assault on our values. The choice is simple: stand with us or watch everything collapse.`,
+
+            5: `Quarterly earnings exceeded analyst expectations as the company reported strong revenue growth across all divisions. The CEO announced plans to expand operations in emerging markets while maintaining focus on core business segments. Investors responded positively to the announcement, driving share prices up 3.2% in early trading. The company projects continued growth through strategic acquisitions and operational efficiency improvements.`,
+
+            6: `Scientists presented new data showing accelerating ice melt in polar regions. The research, published in a peer-reviewed journal, indicates significant changes to ocean temperatures over the past decade. Researchers emphasize the need for continued monitoring and data collection. Multiple independent studies have documented similar trends, though natural variability makes precise predictions challenging.`,
+
+            7: `The home team delivered a dominant performance, crushing their rivals in a spectacular victory. Star player Johnson's incredible athleticism thrilled fans as he shattered multiple records. The opposing team struggled throughout, unable to match the relentless energy and superior skill on display. This triumph cements the team's position as championship contenders.`,
+
+            8: `The proposed education reform has generated significant debate among stakeholders. Teachers unions expressed concerns about implementation timelines, while administrators noted potential budget implications. Parents offered mixed reactions, with some viewing the changes as necessary improvements and others questioning the evidence base. District officials committed to ongoing community engagement throughout the process.`
+        };
+
+        function loadExample(num) {
+            document.getElementById('articleText').value = examples[num];
+        }
+
+        // Sentiment lexicon (simplified AFINN-based)
+        const sentimentWords = {
+            // Positive words
+            'triumph': 3, 'revolutionary': 3, 'incredible': 3, 'transform': 2, 'game-changing': 3,
+            'praised': 2, 'bold': 2, 'promising': 2, 'breakthrough': 3, 'hope': 2,
+            'benefits': 2, 'novel': 1, 'qualified': 1, 'good': 2, 'great': 3,
+            'excellent': 3, 'amazing': 3, 'wonderful': 3, 'fantastic': 3, 'best': 3,
+
+            // Negative words
+            'controversial': -2, 'outrage': -3, 'betrayed': -3, 'slammed': -3, 'reckless': -3,
+            'dangerous': -3, 'devastating': -3, 'catastrophic': -3, 'failed': -2, 'assault': -3,
+            'collapse': -3, 'crisis': -2, 'disaster': -3, 'terrible': -3, 'awful': -3,
+            'horrible': -3, 'worst': -3, 'bad': -2, 'poor': -2, 'weak': -2
+        };
+
+        // Loaded language patterns
+        const loadedLanguage = {
+            positive: ['triumph', 'revolutionary', 'incredible', 'transform', 'game-changing', 'praised',
+                      'bold', 'promising', 'breakthrough', 'loyal', 'storied', 'sleek', 'innovation'],
+            negative: ['controversial', 'outrage', 'betrayed', 'slammed', 'reckless', 'dangerous',
+                      'devastating', 'catastrophic', 'failed', 'assault', 'collapse', 'elites']
+        };
+
+        // Emotional intensity words
+        const emotionalWords = ['outrage', 'betrayed', 'devastating', 'catastrophic', 'triumph',
+                               'incredible', 'revolutionary', 'fight', 'demand', 'assault',
+                               'collapse', 'crisis', 'disaster', 'amazing', 'wonderful', 'terrible', 'awful'];
+
+        async function analyzeArticle() {
+            const text = document.getElementById('articleText').value;
+
+            if (!text.trim()) {
+                alert('Please paste an article to analyze');
+                return;
+            }
+
+            try {
+                // Show processing
+                document.getElementById('processing').classList.add('active');
+                document.getElementById('results').classList.remove('show');
+
+                // Simulate processing delay for UX
+                await new Promise(resolve => setTimeout(resolve, 800));
+
+                // Perform analysis
+                const analysis = performAnalysis(text);
+
+                // Update UI
+                updateResults(analysis);
+
+                // Hide processing, show results
+                document.getElementById('processing').classList.remove('active');
+                document.getElementById('results').classList.add('show');
+
+                // Scroll to results
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (error) {
+                console.error('Analysis error:', error);
+                document.getElementById('processing').classList.remove('active');
+                alert('Error analyzing text. Please try again or check the console for details.');
+            }
+        }
+
+        function performAnalysis(text) {
+            let sentences = [];
+
+            // Try to use NLP if available, fallback to simple split
+            try {
+                if (typeof nlp !== 'undefined') {
+                    const doc = nlp(text);
+                    sentences = doc.sentences().out('array');
+                } else {
+                    // Fallback: split by sentence endings
+                    sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+                }
+            } catch (e) {
+                console.warn('NLP processing failed, using fallback:', e);
+                sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+            }
+
+            const words = text.toLowerCase().split(/\s+/);
+
+            // 1. Sentiment Analysis
+            let sentimentScore = 0;
+            let sentimentCount = 0;
+
+            words.forEach(word => {
+                const cleanWord = word.replace(/[^a-z]/g, '');
+                if (sentimentWords[cleanWord]) {
+                    sentimentScore += sentimentWords[cleanWord];
+                    sentimentCount++;
+                }
+            });
+
+            const avgSentiment = sentimentCount > 0 ? sentimentScore / sentimentCount : 0;
+            const normalizedSentiment = Math.max(-1, Math.min(1, avgSentiment / 3));
+
+            // 2. Emotional Intensity
+            let emotionalCount = 0;
+            words.forEach(word => {
+                const cleanWord = word.replace(/[^a-z]/g, '');
+                if (emotionalWords.includes(cleanWord)) {
+                    emotionalCount++;
+                }
+            });
+            const emotionalIntensity = Math.min(100, (emotionalCount / words.length) * 100);
+
+            // 3. Loaded Language Detection
+            let loadedPositive = [];
+            let loadedNegative = [];
+
+            words.forEach(word => {
+                const cleanWord = word.replace(/[^a-z]/g, '');
+                if (loadedLanguage.positive.includes(cleanWord)) {
+                    loadedPositive.push(cleanWord);
+                }
+                if (loadedLanguage.negative.includes(cleanWord)) {
+                    loadedNegative.push(cleanWord);
+                }
+            });
+
+            // 4. Fact vs Opinion (simplified heuristic)
+            let factualSentences = 0;
+            sentences.forEach(sentence => {
+                const lower = sentence.toLowerCase();
+                // Factual indicators: numbers, specific names, neutral verbs
+                const hasNumbers = /\d+/.test(sentence);
+                let hasNames = false;
+
+                try {
+                    if (typeof nlp !== 'undefined') {
+                        hasNames = nlp(sentence).people().length > 0 || nlp(sentence).places().length > 0;
+                    } else {
+                        // Fallback: check for capitalized words
+                        hasNames = /[A-Z][a-z]+\s+[A-Z][a-z]+/.test(sentence);
+                    }
+                } catch (e) {
+                    hasNames = /[A-Z][a-z]+\s+[A-Z][a-z]+/.test(sentence);
+                }
+
+                const hasOpinionWords = /believe|think|feel|should|must|claim|argue|clearly|obviously/i.test(lower);
+
+                if ((hasNumbers || hasNames) && !hasOpinionWords) {
+                    factualSentences++;
+                }
+            });
+            const factRatio = sentences.length > 0 ? (factualSentences / sentences.length) * 100 : 50;
+
+            return {
+                sentiment: normalizedSentiment,
+                avgSentiment: avgSentiment,
+                emotionalIntensity: emotionalIntensity,
+                emotionalCount: emotionalCount,
+                loadedPositive: loadedPositive,
+                loadedNegative: loadedNegative,
+                factRatio: factRatio,
+                totalWords: words.length,
+                sentences: sentences
+            };
+        }
+
+        function updateResults(analysis) {
+            // Update sentiment
+            const sentimentPercent = ((analysis.sentiment + 1) / 2) * 100;
+            document.getElementById('sentimentScore').textContent = analysis.avgSentiment.toFixed(1);
+
+            let sentimentLabel = 'Neutral';
+            if (analysis.sentiment > 0.3) sentimentLabel = 'Positive';
+            else if (analysis.sentiment < -0.3) sentimentLabel = 'Negative';
+            document.getElementById('sentimentLabel').textContent = sentimentLabel;
+
+            // Update sentiment bar
+            const negWidth = Math.max(5, (1 - analysis.sentiment) / 2 * 100);
+            const posWidth = Math.max(5, (1 + analysis.sentiment) / 2 * 100);
+            const neuWidth = 100 - negWidth - posWidth;
+
+            document.getElementById('negBar').style.width = negWidth + '%';
+            document.getElementById('neuBar').style.width = Math.max(10, neuWidth) + '%';
+            document.getElementById('posBar').style.width = posWidth + '%';
+
+            // Update preview bar
+            document.getElementById('negBarPreview').style.width = negWidth + '%';
+            document.getElementById('neuBarPreview').style.width = Math.max(10, neuWidth) + '%';
+            document.getElementById('posBarPreview').style.width = posWidth + '%';
+
+            // Update percentages in preview
+            document.getElementById('negPercent').textContent = negWidth.toFixed(0) + '%';
+            document.getElementById('neuPercent').textContent = Math.max(10, neuWidth).toFixed(0) + '%';
+            document.getElementById('posPercent').textContent = posWidth.toFixed(0) + '%';
+
+            // Show sentiment preview
+            document.getElementById('sentimentPreview').classList.add('show');
+
+            // Update emotional intensity
+            document.getElementById('emotionScore').textContent = analysis.emotionalIntensity.toFixed(0) + '%';
+
+            // Update fact ratio
+            document.getElementById('factRatio').textContent = analysis.factRatio.toFixed(0) + '%';
+
+            // Update loaded language count
+            const totalLoaded = analysis.loadedPositive.length + analysis.loadedNegative.length;
+            document.getElementById('loadedCount').textContent = totalLoaded;
+
+            // Highlight text
+            highlightText(analysis);
+
+            // Generate insights
+            generateInsights(analysis);
+        }
+
+        function highlightText(analysis) {
+            let text = document.getElementById('articleText').value;
+
+            // Highlight loaded positive words
+            analysis.loadedPositive.forEach(word => {
+                const regex = new RegExp(`\\b${word}\\b`, 'gi');
+                text = text.replace(regex, `<span class="loaded-positive">$&</span>`);
+            });
+
+            // Highlight loaded negative words
+            analysis.loadedNegative.forEach(word => {
+                const regex = new RegExp(`\\b${word}\\b`, 'gi');
+                text = text.replace(regex, `<span class="loaded-negative">$&</span>`);
+            });
+
+            // Highlight emotional words
+            emotionalWords.forEach(word => {
+                const regex = new RegExp(`\\b${word}\\b`, 'gi');
+                if (!analysis.loadedPositive.includes(word.toLowerCase()) &&
+                    !analysis.loadedNegative.includes(word.toLowerCase())) {
+                    text = text.replace(regex, `<span class="emotional-strong">$&</span>`);
+                }
+            });
+
+            document.getElementById('highlightedText').innerHTML = text;
+        }
+
+        function generateInsights(analysis) {
+            const container = document.getElementById('insightsContainer');
+            container.innerHTML = '';
+
+            // Sentiment insight
+            if (Math.abs(analysis.sentiment) > 0.3) {
+                const direction = analysis.sentiment > 0 ? 'positive' : 'negative';
+                const insight = document.createElement('div');
+                insight.className = 'insight-box';
+                insight.innerHTML = `
+                    <div class="insight-title">Strong ${direction.charAt(0).toUpperCase() + direction.slice(1)} Tone</div>
+                    <div class="insight-text">The article uses predominantly ${direction} language, which may indicate bias or a specific framing of the topic.</div>
+                `;
+                container.appendChild(insight);
+            }
+
+            // Emotional intensity insight
+            if (analysis.emotionalIntensity > 15) {
+                const insight = document.createElement('div');
+                insight.className = 'insight-box';
+                insight.innerHTML = `
+                    <div class="insight-title">High Emotional Content</div>
+                    <div class="insight-text">The article contains ${analysis.emotionalCount} emotional words (${analysis.emotionalIntensity.toFixed(0)}% of text). Emotional language can influence readers' reactions beyond the facts presented.</div>
+                `;
+                container.appendChild(insight);
+            }
+
+            // Loaded language insight
+            if (analysis.loadedPositive.length + analysis.loadedNegative.length > 5) {
+                const insight = document.createElement('div');
+                insight.className = 'insight-box';
+                insight.innerHTML = `
+                    <div class="insight-title">Loaded Language Detected</div>
+                    <div class="insight-text">Found ${analysis.loadedPositive.length + analysis.loadedNegative.length} loaded words that may frame the subject in a particular way. Consider how the same facts might be presented with neutral language.</div>
+                `;
+                container.appendChild(insight);
+            }
+
+            // Fact vs opinion insight
+            if (analysis.factRatio < 40) {
+                const insight = document.createElement('div');
+                insight.className = 'insight-box';
+                insight.innerHTML = `
+                    <div class="insight-title">Opinion-Heavy Content</div>
+                    <div class="insight-text">Only ${analysis.factRatio.toFixed(0)}% of sentences appear to be factual statements. This piece leans heavily on interpretation and opinion rather than verifiable facts.</div>
+                `;
+                container.appendChild(insight);
+            }
+
+            // Balance insight
+            if (Math.abs(analysis.sentiment) < 0.15 && analysis.emotionalIntensity < 10) {
+                const insight = document.createElement('div');
+                insight.className = 'insight-box';
+                insight.innerHTML = `
+                    <div class="insight-title">Relatively Balanced Language</div>
+                    <div class="insight-text">The article uses fairly neutral language with low emotional intensity. This suggests a more balanced reporting style.</div>
+                `;
+                container.appendChild(insight);
+            }
+        }
+    </script>
+</body>
+</html>
